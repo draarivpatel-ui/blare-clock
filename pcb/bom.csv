@@ -1,0 +1,7 @@
+Reference,Quantity,Value,Footprint,Description,Manufacturer_Part_Number,Supplier
+U1,1,Seeed Studio XIAO ESP32-C3,Module:Seeed_XIAO_ESP32C3_THT,RISC-V Wi-Fi/BLE Microcontroller Module with USB-C,113991054,BLARE Kit / Seeed Studio
+J1,1,2.25 inch ST7789 SPI TFT Display (284x76),Display_TFT:ST7789_2.25_284x76,Wide-Aspect Full-Color IPS SPI TFT LCD Module,ST7789-2.25-284X76,BLARE Kit / AliExpress
+U2,1,DS3231 High-Precision I2C RTC Module,Timer_RTC:DS3231_Module_4Pin,Temperature-Compensated Real-Time Clock with CR2032 Backup,DS3231SN-MOD,BLARE Kit / Amazon
+BZ1,1,12mm Passive Piezo Buzzer 85dB,Buzzer_Beeper:MagneticBuzzer_12x9.5mm_P6.5mm,5V/3.3V PWM Driven Piezo Alarm Transducer,PS1240P02BT,BLARE Kit / DigiKey
+SW1-SW4,4,6x6x7mm Tactile Push Button Switch,Button_Switch_THT:SW_PUSH_6mm,Through-Hole Momentary Tactile Switch (SNOOZE/ALARM/PLUS/MINUS),B3F-1050,BLARE Kit / Omron
+H1-H4,4,M2.5x8mm Screw + M2.5 Brass Insert,MountingHole:MountingHole_2.5mm_Pad,Enclosure Mounting Hardware,M25-INSERT-SET,BLARE Kit

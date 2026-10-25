@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BlareClock v1.0 - XIAO ESP32-C3 Desk Alarm Clock Simulator & Hardware Inspector</title>
+  <style>
+    :root {
+      --bg: #0b0e17;
+      --panel: #131926;
+      --panel-alt: #1a2234;
+      --border: #2a364f;
+      --text: #eef2ff;
+      --muted: #94a3b8;
+      --accent: #f97316;
+      --cyan: #22d3ee;
+      --green: #22c55e;
+      --red: #ef4444;
+      --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+      --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: radial-gradient(circle at 18% 12%, #23192d 0%, var(--bg) 55%);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      line-height: 1.45;
+      padding: 18px 24px 36px;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 18px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .badge {
+      background: linear-gradient(135deg, #ea580c, #dc2626);
+      color: #fff;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 9px;
+      border-radius: 6px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    h1 {
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .header-links {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .chip-btn {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 7px 12px;
+      border-radius: 7px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .chip-btn:hover {
+      border-color: var(--accent);
+      background: #271f31;
+    }
+    .workbench-grid {
+      display: grid;
+      grid-template-columns: 410px 1fr 365px;
+      gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 1200px) {
+      .workbench-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .card {
+      background: rgba(19, 25, 38, 0.94);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.38);
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent);
+      font-family: var(--mono);
+    }
+    .card-meta {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--muted);
+    }
+
+    /* BlareClock Hardware Desk Enclosure Simulator */
+    .clock-bezel {
+      background: linear-gradient(165deg, #262f45 0%, #111726 100%);
+      border: 2px solid #3b4866;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 0 32px var(--alarm-glow, rgba(249, 115, 22, 0.2)), inset 0 1px 2px rgba(255, 255, 255, 0.12);
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .clock-bezel.ringing {
+      border-color: #ef4444;
+      box-shadow: 0 0 42px rgba(239, 68, 68, 0.65);
+    }
+    .clock-top-strip {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .tft-frame {
+      background: #03060c;
+      border: 3px solid #1e293b;
+      border-radius: 9px;
+      padding: 6px;
+      margin-bottom: 14px;
+    }
+    #tftCanvas {
+      width: 100%;
+      height: 104px;
+      display: block;
+      background: #000;
+      border-radius: 4px;
+    }
+    .tactile-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .tact-btn {
+      background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
+      border: 1px solid #475569;
+      border-bottom: 3px solid #0f172a;
+      color: #fff;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 9px 4px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: transform 0.06s ease, border-color 0.12s ease;
+    }
+    .tact-btn:hover {
+      border-color: var(--accent);
+    }
+    .tact-btn:active {
+      transform: translateY(2px);
+      border-bottom-width: 1px;
+    }
+    .tact-sub {
+      display: block;
+      font-size: 9px;
+      color: #94a3b8;
+      font-weight: 400;
+      margin-top: 2px;
+    }
+    .test-alarm-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #ea580c, #dc2626);
+      border: 1px solid #f97316;
+      color: #fff;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 9px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .test-alarm-btn:hover {
+      filter: brightness(1.1);
+    }
+    .telemetry-box {
+      background: #070a11;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 11px;
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+    .telemetry-line {
+      color: var(--cyan);
+      margin-bottom: 3px;
+    }
+    .telemetry-sub {
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    /* Center Viewport */
+    .viewport-tabs {
+      display: flex;
+      gap: 8px;
+    }
+    .tab-btn {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: var(--accent);
+      color: #120902;
+      border-color: var(--accent);
+      font-weight: 700;
+    }
+    .canvas-stage {
+      position: relative;
+      background: #080b12;
+      border: 1px solid #1e293b;
+      border-radius: 9px;
+      overflow: hidden;
+      height: 360px;
+    }
+    #cadCanvas, #pcbCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+    .stage-overlay {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      background: rgba(9, 13, 22, 0.88);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px 10px;
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+    .layer-toggles {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .layer-toggles label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+    .swatch {
+      width: 9px;
+      height: 9px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+    .spec-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+      margin-bottom: 12px;
+    }
+    .spec-table th, .spec-table td {
+      padding: 6px 7px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      text-align: left;
+    }
+    .spec-table th {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+    .pin-tag {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      background: rgba(249, 115, 22, 0.16);
+      color: #fb923c;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    .drc-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.35);
+      color: #86efac;
+      padding: 8px 11px;
+      border-radius: 8px;
+      font-family: var(--mono);
+      font-size: 11px;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="badge">BLARE Mission</span>
+      <div>
+        <h1>BlareClock v1.0 - Smart Desk Alarm Clock &amp; Hardware Inspector</h1>
+        <div class="subtitle">Seeed XIAO ESP32-C3 | 2.25" ST7789 Wide TFT (284x76) | DS3231 I2C RTC | 85dB Piezo Alarm</div>
+      </div>
+    </div>
+    <div class="header-links">
+      <a class="chip-btn" href="pcb/gerbers/blare-clock-gerbers.zip" download>Download Gerbers (.zip)</a>
+      <a class="chip-btn" href="pcb/blare_clock.kicad_pcb" download>KiCad 8 PCB</a>
+      <a class="chip-btn" href="cad/blare_enclosure.scad" download>OpenSCAD Case</a>
+      <a class="chip-btn" href="firmware/blare_clock.ino" download>ESP32-C3 Firmware (.ino)</a>
+      <a class="chip-btn" href="pcb/bom.csv" download>BOM (.csv)</a>
+    </div>
+  </header>
+
+  <main class="workbench-grid">
+    <!-- COLUMN 1: Interactive ST7789 Desk Clock Simulator -->
+    <section class="card">
+      <div class="card-header">
+        <span class="card-title">1. Live 2.25" ST7789 TFT Clock Simulator</span>
+        <span class="card-meta">284x76 IPS SPI + Piezo</span>
+      </div>
+
+      <div class="clock-bezel" id="clockBezel">
+        <div class="clock-top-strip">
+          <span>MODEL: BLARE-C3-ST7789</span>
+          <span id="rtcTempBadge">DS3231 TCXO: 23.5 C | CR2032 OK</span>
+        </div>
+
+        <div class="tft-frame">
+          <canvas id="tftCanvas" width="340" height="104"></canvas>
+        </div>
+
+        <div class="tactile-row">
+          <button class="tact-btn" onclick="pressButton('SNOOZE')">
+            SNOOZE
+            <span class="tact-sub">SW1 (D0)</span>
+          </button>
+          <button class="tact-btn" onclick="pressButton('ALARM')">
+            ALARM SET
+            <span class="tact-sub">SW2 (D1)</span>
+          </button>
+          <button class="tact-btn" onclick="pressButton('PLUS')">
+            PLUS +
+            <span class="tact-sub">SW3 (D2)</span>
+          </button>
+          <button class="tact-btn" onclick="pressButton('MINUS')">
+            MINUS -
+            <span class="tact-sub">SW4 (D3)</span>
+          </button>
+        </div>
+
+        <button class="test-alarm-btn" id="btnTriggerAlarm" onclick="toggleTestAlarm()">
+          TRIGGER 85dB PIEZO ALARM (D6 PWM)
+        </button>
+      </div>
+
+      <div class="telemetry-box">
+        <div class="telemetry-line" id="busLog">&gt; I2C (0x68) DS3231 synced via Wi-Fi NTP | SPI (40MHz) ST7789 active</div>
+        <div class="telemetry-sub" id="stateLog">State: STATE_CLOCK_NORMAL | Alarm: 07:00 ON | Piezo PWM (D6): Idle</div>
+      </div>
+    </section>
+
+    <!-- COLUMN 2: 3D Angled Enclosure & 2-Layer PCB Viewer -->
+    <section class="card">
+      <div class="card-header">
+        <span class="card-title">2. 3D Desk Enclosure &amp; 92x54mm PCB Inspector</span>
+        <div class="viewport-tabs">
+          <button class="tab-btn active" id="btnViewCad" onclick="switchMode('cad')">3D Desk Stand CAD</button>
+          <button class="tab-btn" id="btnViewPcb" onclick="switchMode('pcb')">2-Layer PCB Layout</button>
+        </div>
+      </div>
+
+      <div class="canvas-stage">
+        <canvas id="cadCanvas" width="640" height="360"></canvas>
+        <canvas id="pcbCanvas" width="640" height="360" style="display:none;"></canvas>
+
+        <div class="stage-overlay" id="cadControls">
+          <div>
+            Explode Housing:
+            <input type="range" id="explodeSlider" min="0" max="100" value="25" oninput="drawCad()" style="vertical-align:middle;width:110px;" />
+          </div>
+          <div>Drag to orbit | 15-deg angled desk stand (72g PLA)</div>
+        </div>
+
+        <div class="stage-overlay" id="pcbControls" style="display:none;">
+          <div class="layer-toggles">
+            <label><input type="checkbox" id="chkFCu" checked onchange="drawPcb()" /><span class="swatch" style="background:#ef4444;"></span>F.Cu</label>
+            <label><input type="checkbox" id="chkBCu" checked onchange="drawPcb()" /><span class="swatch" style="background:#3b82f6;"></span>B.Cu</label>
+            <label><input type="checkbox" id="chkSilk" checked onchange="drawPcb()" /><span class="swatch" style="background:#f8fafc;"></span>F.SilkS</label>
+            <label><input type="checkbox" id="chkPours" checked onchange="drawPcb()" /><span class="swatch" style="background:#10b981;"></span>GND Pour</label>
+          </div>
+          <div>92.0 x 54.0 mm | 2-Layer FR4</div>
+        </div>
+      </div>
+
+      <div class="drc-banner">
+        <span>KiCad 8 DRC: 0 Errors, 0 Unconnected Nets, 36 Plated Drills</span>
+        <span>JLCPCB 2-Layer Ready</span>
+      </div>
+    </section>
+
+    <!-- COLUMN 3: XIAO ESP32-C3 Pinout & BOM -->
+    <section class="card">
+      <div class="card-header">
+        <span class="card-title">3. XIAO ESP32-C3 Pinout &amp; BOM</span>
+        <span class="card-meta">All 11 GPIOs mapped</span>
+      </div>
+
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th>XIAO Pin</th>
+            <th>Net Name</th>
+            <th>Connected Subsystem</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="pin-tag">D0 / GPIO2</span></td><td>BTN_SNOOZE</td><td>SW1 Tactile Switch (Snooze)</td></tr>
+          <tr><td><span class="pin-tag">D1 / GPIO3</span></td><td>BTN_ALARM</td><td>SW2 Tactile Switch (Alarm Mode)</td></tr>
+          <tr><td><span class="pin-tag">D2 / GPIO4</span></td><td>BTN_PLUS</td><td>SW3 Tactile Switch (Increment)</td></tr>
+          <tr><td><span class="pin-tag">D3 / GPIO5</span></td><td>BTN_MINUS</td><td>SW4 Tactile Switch (Decrement)</td></tr>
+          <tr><td><span class="pin-tag">D4 / GPIO6</span></td><td>I2C_SDA</td><td>DS3231 RTC Module SDA (0x68)</td></tr>
+          <tr><td><span class="pin-tag">D5 / GPIO7</span></td><td>I2C_SCL</td><td>DS3231 RTC Module SCL</td></tr>
+          <tr><td><span class="pin-tag">D6 / GPIO21</span></td><td>BUZZER_PWM</td><td>BZ1 12mm 85dB Piezo Transducer</td></tr>
+          <tr><td><span class="pin-tag">D7 / GPIO20</span></td><td>TFT_DC</td><td>ST7789 2.25" TFT Data/Command</td></tr>
+          <tr><td><span class="pin-tag">D8 / GPIO8</span></td><td>TFT_SCK</td><td>ST7789 2.25" TFT SPI Clock</td></tr>
+          <tr><td><span class="pin-tag">D9 / GPIO9</span></td><td>TFT_CS</td><td>ST7789 2.25" TFT Chip Select</td></tr>
+          <tr><td><span class="pin-tag">D10 / GPIO10</span></td><td>TFT_MOSI</td><td>ST7789 2.25" TFT SPI MOSI</td></tr>
+        </tbody>
+      </table>
+
+      <div class="card-header" style="margin-top:8px;">
+        <span class="card-title">Bill of Materials (BLARE Kit)</span>
+        <span class="card-meta">6 line items</span>
+      </div>
+      <table class="spec-table" style="margin-bottom:0;">
+        <thead>
+          <tr>
+            <th>Ref</th>
+            <th>Qty</th>
+            <th>Component Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>U1</td><td>1</td><td>Seeed Studio XIAO ESP32-C3 (Wi-Fi/BLE)</td></tr>
+          <tr><td>J1</td><td>1</td><td>2.25" ST7789 SPI TFT LCD (284x76 IPS)</td></tr>
+          <tr><td>U2</td><td>1</td><td>DS3231 High-Precision I2C RTC + CR2032</td></tr>
+          <tr><td>BZ1</td><td>1</td><td>12mm 85dB Passive Piezo Buzzer</td></tr>
+          <tr><td>SW1-4</td><td>4</td><td>6x6x7mm Omron Tactile Push Switches</td></tr>
+          <tr><td>H1-H4</td><td>4</td><td>M2.5x8mm Screws + M2.5 Brass Inserts</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    // State Machine matching firmware/blare_clock.ino
+    const STATES = {
+      NORMAL: "STATE_CLOCK_NORMAL",
+      EDIT_HOUR: "STATE_EDIT_ALARM_HOUR",
+      EDIT_MIN: "STATE_EDIT_ALARM_MIN",
+      RINGING: "STATE_ALARM_RINGING",
+      SNOOZE: "STATE_SNOOZING"
+    };
+
+    let currentState = STATES.NORMAL;
+    let alarmHour = 7;
+    let alarmMinute = 0;
+    let alarmArmed = true;
+    let snoozeRemainingMin = 9;
+    let melodyStep = 0;
+    let ringTimer = null;
+    let audioCtx = null;
+
+    const MELODY_HZ = [1047, 1319, 1568, 2093];
+
+    function playPiezo(freq = 1047, dur = 0.08) {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.11, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + dur + 0.01);
+      } catch (e) {}
+    }
+
+    function startAlarmLoop() {
+      stopAlarmLoop();
+      currentState = STATES.RINGING;
+      document.getElementById("clockBezel").classList.add("ringing");
+      document.getElementById("btnTriggerAlarm").textContent = "STOP RINGING ALARM (OR PRESS SNOOZE)";
+      ringTimer = setInterval(() => {
+        const hz = MELODY_HZ[melodyStep % MELODY_HZ.length];
+        melodyStep++;
+        playPiezo(hz, 0.16);
+        renderTft();
+      }, 320);
+      renderTft();
+    }
+
+    function stopAlarmLoop() {
+      if (ringTimer) {
+        clearInterval(ringTimer);
+        ringTimer = null;
+      }
+      document.getElementById("clockBezel").classList.remove("ringing");
+      document.getElementById("btnTriggerAlarm").textContent = "TRIGGER 85dB PIEZO ALARM (D6 PWM)";
+    }
+
+    function toggleTestAlarm() {
+      if (currentState === STATES.RINGING) {
+        stopAlarmLoop();
+        currentState = STATES.NORMAL;
+        updateTelemetry("Manual alarm stop -> STATE_CLOCK_NORMAL");
+      } else {
+        startAlarmLoop();
+        updateTelemetry("D6 PWM driving BZ1 piezo cascade (1047Hz..2093Hz)");
+      }
+      renderTft();
+    }
+
+    function pressButton(btn) {
+      if (btn === "SNOOZE") {
+        playPiezo(880, 0.05);
+        if (currentState === STATES.RINGING) {
+          stopAlarmLoop();
+          currentState = STATES.SNOOZE;
+          snoozeRemainingMin = 9;
+          updateTelemetry("SW1 (D0) pressed: Alarm snoozed for +9 minutes");
+        } else {
+          alarmArmed = !alarmArmed;
+          if (!alarmArmed) currentState = STATES.NORMAL;
+          updateTelemetry(`SW1 (D0) pressed: Daily alarm ${alarmArmed ? "ARMED" : "DISARMED"}`);
+        }
+      } else if (btn === "ALARM") {
+        playPiezo(1175, 0.05);
+        if (currentState === STATES.RINGING) {
+          stopAlarmLoop();
+          currentState = STATES.NORMAL;
+        } else if (currentState === STATES.NORMAL || currentState === STATES.SNOOZE) {
+          currentState = STATES.EDIT_HOUR;
+        } else if (currentState === STATES.EDIT_HOUR) {
+          currentState = STATES.EDIT_MIN;
+        } else {
+          currentState = STATES.NORMAL;
+          alarmArmed = true;
+        }
+        updateTelemetry(`SW2 (D1) pressed: Mode -> ${currentState}`);
+      } else if (btn === "PLUS") {
+        playPiezo(1319, 0.04);
+        if (currentState === STATES.EDIT_HOUR) {
+          alarmHour = (alarmHour + 1) % 24;
+        } else {
+          alarmMinute = (alarmMinute + 1) % 60;
+        }
+        updateTelemetry(`SW3 (D2) pressed: Alarm target -> ${ pad2(alarmHour) }:${ pad2(alarmMinute) }`);
+      } else if (btn === "MINUS") {
+        playPiezo(988, 0.04);
+        if (currentState === STATES.EDIT_HOUR) {
+          alarmHour = (alarmHour + 23) % 24;
+        } else {
+          alarmMinute = (alarmMinute + 59) % 60;
+        }
+        updateTelemetry(`SW4 (D3) pressed: Alarm target -> ${ pad2(alarmHour) }:${ pad2(alarmMinute) }`);
+      }
+      renderTft();
+    }
+
+    function pad2(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function updateTelemetry(msg) {
+      document.getElementById("busLog").textContent = `> ${msg}`;
+      document.getElementById("stateLog").textContent =
+        `State: ${currentState} | Alarm: ${pad2(alarmHour)}:${pad2(alarmMinute)} (${alarmArmed ? "ON" : "OFF"})`;
+    }
+
+    function renderTft() {
+      const cvs = document.getElementById("tftCanvas");
+      const ctx = cvs.getContext("2d");
+      const w = cvs.width, h = cvs.height;
+
+      const isRingFlash = currentState === STATES.RINGING && (melodyStep % 2 === 1);
+      ctx.fillStyle = isRingFlash ? "#2a070c" : "#02050b";
+      ctx.fillRect(0, 0, w, h);
+
+      // Top telemetry bar
+      ctx.font = "bold 10px monospace";
+      ctx.fillStyle = "#22d3ee";
+      ctx.fillText("NTP+DS3231 SYNC", 10, 15);
+
+      if (currentState === STATES.RINGING) {
+        ctx.fillStyle = "#ef4444";
+        ctx.fillText("!! BLARE 85dB RINGING !!", 182, 15);
+      } else if (currentState === STATES.SNOOZE) {
+        ctx.fillStyle = "#facc15";
+        ctx.fillText(`SNOOZE ACTIVE (+${snoozeRemainingMin}M)`, 198, 15);
+      } else if (alarmArmed) {
+        ctx.fillStyle = "#22c55e";
+        ctx.fillText(`ALM ${pad2(alarmHour)}:${pad2(alarmMinute)} ARMED`, 225, 15);
+      } else {
+        ctx.fillStyle = "#64748b";
+        ctx.fillText("ALM DISARMED", 248, 15);
+      }
+
+      ctx.strokeStyle = "#1e293b";
+      ctx.beginPath();
+      ctx.moveTo(8, 21);
+      ctx.lineTo(w - 8, 21);
+      ctx.stroke();
+
+      // Main digits
+      const now = new Date();
+      let dispH = pad2(now.getHours());
+      let dispM = pad2(now.getMinutes());
+      let dispS = pad2(now.getSeconds());
+
+      if (currentState === STATES.EDIT_HOUR || currentState === STATES.EDIT_MIN) {
+        dispH = pad2(alarmHour);
+        dispM = pad2(alarmMinute);
+        dispS = "00";
+      }
+
+      ctx.font = "bold 44px monospace";
+      ctx.fillStyle = currentState === STATES.RINGING ? "#f87171" :
+                      (currentState === STATES.EDIT_HOUR || currentState === STATES.EDIT_MIN) ? "#facc15" : "#f8fafc";
+      ctx.fillText(`${dispH}:${dispM}:${dispS}`, 28, 66);
+
+      // Highlight active edit field
+      if (currentState === STATES.EDIT_HOUR) {
+        ctx.fillStyle = "#f97316";
+        ctx.fillRect(28, 72, 54, 3);
+      } else if (currentState === STATES.EDIT_MIN) {
+        ctx.fillStyle = "#f97316";
+        ctx.fillRect(108, 72, 54, 3);
+      }
+
+      // Bottom legend
+      ctx.font = "10px monospace";
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillText("[D0:SNOOZE]    [D1:ALARM]    [D2:PLUS+]    [D3:MINUS-]", 12, 95);
+    }
+
+    setInterval(renderTft, 500);
+
+    // =========================================================================
+    // 3D Desk-Stand CAD Renderer
+    // =========================================================================
+    let cadRotX = 0.65;
+    let cadRotZ = -0.48;
+    let isDraggingCad = false;
+    let dragStart = { x: 0, y: 0 };
+
+    const cadCanvas = document.getElementById("cadCanvas");
+    cadCanvas.addEventListener("mousedown", (e) => {
+      isDraggingCad = true;
+      dragStart = { x: e.clientX, y: e.clientY };
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!isDraggingCad) return;
+      cadRotZ += (e.clientX - dragStart.x) * 0.008;
+      cadRotX = Math.max(0.2, Math.min(1.35, cadRotX + (e.clientY - dragStart.y) * 0.008));
+      dragStart = { x: e.clientX, y: e.clientY };
+      drawCad();
+    });
+    window.addEventListener("mouseup", () => { isDraggingCad = false; });
+
+    function project3D(x, y, z, cx, cy, scale) {
+      const cosZ = Math.cos(cadRotZ), sinZ = Math.sin(cadRotZ);
+      const cosX = Math.cos(cadRotX), sinX = Math.sin(cadRotX);
+      const rx = x * cosZ - y * sinZ;
+      const ry = x * sinZ + y * cosZ;
+      return {
+        x: cx + rx * scale,
+        y: cy + (ry * cosX - z * sinX) * scale
+      };
+    }
+
+    function drawBox3D(ctx, x0, y0, z0, x1, y1, z1, cx, cy, scale, topColor, sideColor, strokeColor) {
+      const p = [
+        project3D(x0, y0, z0, cx, cy, scale),
+        project3D(x1, y0, z0, cx, cy, scale),
+        project3D(x1, y1, z0, cx, cy, scale),
+        project3D(x0, y1, z0, cx, cy, scale),
+        project3D(x0, y0, z1, cx, cy, scale),
+        project3D(x1, y0, z1, cx, cy, scale),
+        project3D(x1, y1, z1, cx, cy, scale),
+        project3D(x0, y1, z1, cx, cy, scale)
+      ];
+      const faces = [[0,1,5,4], [1,2,6,5], [2,3,7,6], [3,0,4,7]];
+      ctx.fillStyle = sideColor;
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 1;
+      faces.forEach((f) => {
+        ctx.beginPath();
+        ctx.moveTo(p[f[0]].x, p[f[0]].y);
+        ctx.lineTo(p[f[1]].x, p[f[1]].y);
+        ctx.lineTo(p[f[2]].x, p[f[2]].y);
+        ctx.lineTo(p[f[3]].x, p[f[3]].y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      });
+      ctx.fillStyle = topColor;
+      ctx.beginPath();
+      ctx.moveTo(p[4].x, p[4].y);
+      ctx.lineTo(p[5].x, p[5].y);
+      ctx.lineTo(p[6].x, p[6].y);
+      ctx.lineTo(p[7].x, p[7].y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    function drawCad() {
+      const ctx = cadCanvas.getContext("2d");
+      const w = cadCanvas.width, h = cadCanvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const explode = parseFloat(document.getElementById("explodeSlider").value) * 0.32;
+      const cx = w * 0.5, cy = h * 0.56;
+      const scale = 2.65;
+
+      // 1. Rear Angled Desk Housing (99 x 61 x 24mm)
+      drawBox3D(ctx, -49.5, -30.5, -18 - explode, 49.5, 30.5, -explode, cx, cy, scale, "#1e293b", "#0f172a", "#475569");
+
+      // 2. 92 x 54 x 1.6mm Carrier PCB
+      drawBox3D(ctx, -46, -27, 0, 46, 27, 1.6, cx, cy, scale, "#064e3b", "#022c22", "#10b981");
+
+      // XIAO ESP32-C3 (Left), ST7789 2.25" TFT (Center), DS3231 RTC & Piezo (Right)
+      drawBox3D(ctx, -41, -19, 1.6, -23, 2, 5.2, cx, cy, scale, "#c2410c", "#7c2d12", "#fb923c");
+      drawBox3D(ctx, -20, -18, 1.6, 24, 4, 5.5, cx, cy, scale, "#020617", "#0f172a", "#22d3ee");
+      drawBox3D(ctx, 28, -19, 1.6, 40, -5, 6.0, cx, cy, scale, "#1d4ed8", "#1e3a8a", "#60a5fa");
+      drawBox3D(ctx, 28, 4, 1.6, 40, 16, 9.5, cx, cy, scale, "#334155", "#1e293b", "#f97316");
+
+      // 4 Tactile Switches along bottom
+      for (let i = 0; i < 4; i++) {
+        const bx = -28 + i * 16;
+        drawBox3D(ctx, bx - 3, 14, 1.6, bx + 3, 20, 7.0 + explode * 0.5, cx, cy, scale, "#e2e8f0", "#64748b", "#f8fafc");
+      }
+
+      // 3. Front Window Bezel (99 x 61 x 4mm)
+      const zBez = 11 + explode * 1.3;
+      drawBox3D(ctx, -49.5, -30.5, zBez, 49.5, 30.5, zBez + 4.0, cx, cy, scale, "rgba(234, 88, 12, 0.25)", "rgba(30, 41, 59, 0.85)", "#fb923c");
+
+      ctx.fillStyle = "#fdba74";
+      ctx.font = "11px monospace";
+      ctx.fillText("STACKUP: Front Bezel + Button Bar -> ST7789 TFT + 92x54mm PCB -> Angled Rear Housing", 14, 22);
+    }
+
+    // =========================================================================
+    // 2-Layer KiCad PCB Renderer
+    // =========================================================================
+    function drawPcb() {
+      const cvs = document.getElementById("pcbCanvas");
+      const ctx = cvs.getContext("2d");
+      const w = cvs.width, h = cvs.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const showFCu = document.getElementById("chkFCu").checked;
+      const showBCu = document.getElementById("chkBCu").checked;
+      const showSilk = document.getElementById("chkSilk").checked;
+      const showPours = document.getElementById("chkPours").checked;
+
+      const scale = 5.2;
+      const ox = (w - 92 * scale) / 2;
+      const oy = 32;
+
+      ctx.fillStyle = "#051b14";
+      ctx.strokeStyle = "#f59e0b";
+      ctx.lineWidth = 2;
+      ctx.fillRect(ox, oy, 92 * scale, 54 * scale);
+      ctx.strokeRect(ox, oy, 92 * scale, 54 * scale);
+
+      if (showPours) {
+        ctx.fillStyle = "rgba(16, 185, 129, 0.13)";
+        ctx.fillRect(ox + 4, oy + 4, 92 * scale - 8, 54 * scale - 8);
+      }
+
+      // B.Cu button & I2C tracks
+      if (showBCu) {
+        ctx.strokeStyle = "#3b82f6";
+        ctx.lineWidth = 2.2;
+        [18, 34, 50, 66].forEach((bx, idx) => {
+          ctx.beginPath();
+          ctx.moveTo(ox + (bx - 3.25) * scale, oy + 44 * scale);
+          ctx.lineTo(ox + 6.38 * scale, oy + (10.38 + idx * 2.54) * scale);
+          ctx.stroke();
+        });
+        // I2C to DS3231
+        ctx.beginPath();
+        ctx.moveTo(ox + 6.38 * scale, oy + 20.54 * scale);
+        ctx.lineTo(ox + 80 * scale, oy + 17.27 * scale);
+        ctx.moveTo(ox + 6.38 * scale, oy + 23.08 * scale);
+        ctx.lineTo(ox + 80 * scale, oy + 19.81 * scale);
+        ctx.stroke();
+      }
+
+      // F.Cu SPI & Buzzer tracks
+      if (showFCu) {
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(ox + 21.62 * scale, oy + 23.08 * scale);
+        ctx.lineTo(ox + 42.19 * scale, oy + 8.0 * scale);
+        ctx.moveTo(ox + 21.62 * scale, oy + 18.0 * scale);
+        ctx.lineTo(ox + 44.73 * scale, oy + 8.0 * scale);
+        ctx.moveTo(ox + 21.62 * scale, oy + 25.62 * scale);
+        ctx.lineTo(ox + 49.81 * scale, oy + 8.0 * scale);
+        ctx.moveTo(ox + 6.38 * scale, oy + 25.62 * scale);
+        ctx.lineTo(ox + 76.75 * scale, oy + 38.0 * scale);
+        ctx.stroke();
+      }
+
+      if (showSilk) {
+        ctx.strokeStyle = "#f8fafc";
+        ctx.lineWidth = 1.2;
+        // U1 XIAO ESP32-C3
+        ctx.strokeRect(ox + 5 * scale, oy + 7.5 * scale, 18 * scale, 21 * scale);
+        // J1 ST7789 2.25" TFT
+        ctx.strokeRect(ox + 25 * scale, oy + 6 * scale, 44 * scale, 22 * scale);
+        // U2 DS3231 RTC
+        ctx.strokeRect(ox + 75 * scale, oy + 10 * scale, 10 * scale, 12 * scale);
+        // BZ1 Piezo
+        ctx.beginPath();
+        ctx.arc(ox + 80 * scale, oy + 38 * scale, 6 * scale, 0, Math.PI * 2);
+        ctx.stroke();
+        // SW1..SW4
+        [18, 34, 50, 66].forEach((bx, idx) => {
+          ctx.strokeRect(ox + (bx - 3.1) * scale, oy + 40.9 * scale, 6.2 * scale, 6.2 * scale);
+        });
+
+        ctx.fillStyle = "#f8fafc";
+        ctx.font = "11px monospace";
+        ctx.fillText("U1:XIAO-C3", ox + 6.5 * scale, oy + 18 * scale);
+        ctx.fillText("J1:ST7789 2.25\" WIDE TFT (284x76)", ox + 28 * scale, oy + 18 * scale);
+        ctx.fillText("U2:RTC", ox + 75.8 * scale, oy + 16 * scale);
+        ctx.fillText("BZ1", ox + 78 * scale, oy + 38.5 * scale);
+      }
+    }
+
+    function switchMode(mode) {
+      const isCad = mode === "cad";
+      document.getElementById("cadCanvas").style.display = isCad ? "block" : "none";
+      document.getElementById("cadControls").style.display = isCad ? "flex" : "none";
+      document.getElementById("pcbCanvas").style.display = isCad ? "none" : "block";
+      document.getElementById("pcbControls").style.display = isCad ? "none" : "flex";
+      document.getElementById("btnViewCad").classList.toggle("active", isCad);
+      document.getElementById("btnViewPcb").classList.toggle("active", !isCad);
+      if (isCad) drawCad();
+      else drawPcb();
+    }
+
+    renderTft();
+    drawCad();
+  </script>
+</body>
+</html>
