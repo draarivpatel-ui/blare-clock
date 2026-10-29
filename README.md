@@ -8,7 +8,6 @@ I designed and built **BlareClock** for the Hack Club Stardance **BLARE** alarm 
 
 In addition to the complete KiCad 8 schematic, 2-layer carrier PCB (`92.0mm x 54.0mm`), JLCPCB Gerber archive, 15-degree angled OpenSCAD desk enclosure STLs, and ESP32-C3 Arduino firmware, I also built an interactive browser simulator at [https://aariv.me/blare-clock/](https://aariv.me/blare-clock/) where you can test the live 284x76 IPS clock UI, set alarms, trigger the 85dB piezo wake-up melody via Web Audio, inspect the 2-layer PCB traces, and orbit the 3D exploded CAD housing.
 
----
 
 ## Why I Built This
 
@@ -19,7 +18,6 @@ I wanted to build a dedicated, zero-distraction hardware desk clock that solves 
 2. **Wide-aspect high-contrast digits (`284x76 IPS`)**: Instead of a cramped 128x64 OLED or blinding 7-segment LEDs, I chose a wide 2.25" ST7789 bar TFT so the `HH:MM:SS` readout, armed alarm time, snooze badge, and room temperature fit side by side in crisp typography.
 3. **Physical tactile controls & an unmistakable alarm**: Four front-mounted tactile switches (`SNOOZE`, `ALARM SET`, `PLUS +`, `MINUS -`) and a 4-note escalating passive piezo cascade (`C6 -> E6 -> G6 -> C7`) make sure I can operate it by feel at 6:30 AM.
 
----
 
 ## Features & How It Works Under the Hood
 
@@ -34,7 +32,6 @@ I structured the ESP32-C3 firmware around a deterministic 5-state controller:
 - **Carrier PCB (`pcb/blare_clock.kicad_pcb`)**: Places the 2.25" ST7789 display module top-center (`Y = 6..34mm`) directly above the four 6mm Omron tactile buttons (`SW1..SW4` at `Y = 45mm`, spaced `18mm` apart) so the entire front face acts as the user interface while the XIAO ESP32-C3, DS3231 RTC module, and 12mm piezo transducer mount cleanly on the rear/inner carrier zone.
 - **Angled Desk Housing (`cad/blare_enclosure.scad`)**: Designed with a `15-degree` backward tilt so the display faces your eyes naturally on a desk or nightstand. Includes acoustic louver slots on the rear housing over `BZ1`, a recessed front bezel for the 2.25" glass panel, and a captive 4-button actuator bar (`~72g` total PLA).
 
----
 
 ## What Was Tricky to Build
 
@@ -43,7 +40,6 @@ I structured the ESP32-C3 firmware around a deterministic 5-state controller:
 2. **Eliminating Display Flicker on the 284x76 ST7789 Panel**:
    Redrawing the full `284x76` SPI framebuffer on every loop iteration caused visible tearing on the seconds counter. In `firmware/blare_clock.ino`, I tracked `lastRenderedSecond` and `lastUiState` so SPI region updates only fire when a digit or state actually changes, keeping the display rock-solid while leaving plenty of CPU headroom for the non-blocking piezo sequencer.
 
----
 
 ## XIAO ESP32-C3 Pinout & Carrier Wiring
 
@@ -62,7 +58,6 @@ I structured the ESP32-C3 firmware around a deterministic 5-state controller:
 | `D10 / GPIO10 (MOSI)` | `TFT_MOSI` | `J1` 2.25" ST7789 SPI TFT Serial Data In |
 | `3V3 / 5V / GND` | Power | Common `3V3` logic/backlight rail and stitched `GND` pour |
 
----
 
 ## Bill of Materials
 
@@ -75,7 +70,6 @@ I structured the ESP32-C3 firmware around a deterministic 5-state controller:
 | `SW1-SW4` | 4 | 6x6x7mm Omron Tactile Push Buttons (`B3F-1050`) | `SW_PUSH_6mm` |
 | `H1-H4` | 4 | M2.5x8mm Screws + M2.5 Brass Heat-Set Inserts | 2.5mm Mounting Holes |
 
----
 
 ## Repository Structure & How to Explore It
 
