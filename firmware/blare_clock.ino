@@ -196,14 +196,14 @@ void handleButtons(const DateTime& now) {
     playTone(1319, 35);
     if (currentState == STATE_EDIT_ALARM_HOUR) {
       alarmHour = (alarmHour + 1) % 24;
-    } else {
+    } else if (currentState == STATE_EDIT_ALARM_MIN) {
       alarmMinute = (alarmMinute + 1) % 60;
     }
   } else if (bMinus) {
     playTone(988, 35);
     if (currentState == STATE_EDIT_ALARM_HOUR) {
       alarmHour = (alarmHour + 23) % 24;
-    } else {
+    } else if (currentState == STATE_EDIT_ALARM_MIN) {
       alarmMinute = (alarmMinute + 59) % 60;
     }
   }
