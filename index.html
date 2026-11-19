@@ -603,7 +603,7 @@
         playPiezo(1319, 0.04);
         if (currentState === STATES.EDIT_HOUR) {
           alarmHour = (alarmHour + 1) % 24;
-        } else {
+        } else if (currentState === STATES.EDIT_MIN) {
           alarmMinute = (alarmMinute + 1) % 60;
         }
         updateTelemetry(`SW3 (D2) pressed: Alarm target -> ${ pad2(alarmHour) }:${ pad2(alarmMinute) }`);
@@ -611,7 +611,7 @@
         playPiezo(988, 0.04);
         if (currentState === STATES.EDIT_HOUR) {
           alarmHour = (alarmHour + 23) % 24;
-        } else {
+        } else if (currentState === STATES.EDIT_MIN) {
           alarmMinute = (alarmMinute + 59) % 60;
         }
         updateTelemetry(`SW4 (D3) pressed: Alarm target -> ${ pad2(alarmHour) }:${ pad2(alarmMinute) }`);
