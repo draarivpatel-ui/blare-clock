@@ -59,7 +59,6 @@ int snoozeUntilMinute = -1;
 int snoozeUntilHour   = -1;
 
 unsigned long lastTickMs    = 0;
-unsigned long alarmStartMs  = 0;
 unsigned long lastButtonMs  = 0;
 
 // Escalating piezo melody frequencies (Hz)
@@ -240,12 +239,10 @@ void loop() {
     if (alarmArmed && currentState == STATE_CLOCK_NORMAL) {
       if (now.hour() == alarmHour && now.minute() == alarmMinute && now.second() == 0) {
         currentState = STATE_ALARM_RINGING;
-        alarmStartMs = millis();
       }
     } else if (currentState == STATE_SNOOZING) {
       if (now.hour() == snoozeUntilHour && now.minute() == snoozeUntilMinute && now.second() == 0) {
         currentState = STATE_ALARM_RINGING;
-        alarmStartMs = millis();
       }
     }
 
